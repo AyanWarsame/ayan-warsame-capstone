@@ -12,11 +12,9 @@ server {
     }
 
     # Proxy API calls to backend
-    # For docker-compose: uses 'backend' (service name in docker-compose.yml)
-    # For Kubernetes: will use 'backend-service' (Kubernetes service name)
-    # Note: In Kubernetes, you may need to update this to 'backend-service.ayan-warsame.svc.cluster.local:5000'
+    # For Kubernetes: uses 'backend-service' (Kubernetes service name)
     location /api/ {
-        proxy_pass http://backend:5000/;
+        proxy_pass http://backend-service:5000/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

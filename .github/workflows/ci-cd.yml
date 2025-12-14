@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  AWS_REGION: provided-by-devops
+  AWS_REGION: eu-west-1 
   ECR_REPOSITORY_FRONTEND: ayan-warsame/frontend
   ECR_REPOSITORY_BACKEND: ayan-warsame/backend
   KUBERNETES_NAMESPACE: ayan-warsame
