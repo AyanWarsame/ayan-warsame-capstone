@@ -100,7 +100,7 @@ jobs:
 
     - name: Configure kubectl for EKS
       run: |
-        aws eks update-kubeconfig --name <CLUSTER_NAME> --region ${{ env.AWS_REGION }}
+        aws eks update-kubeconfig --name innovation --region ${{ env.AWS_REGION }}
 
     - name: Get version
       id: version
