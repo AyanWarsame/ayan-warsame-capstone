@@ -46,4 +46,6 @@ spec:
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 3
+      imagePullSecrets:
+      - name: ecr-registry-secret
 
