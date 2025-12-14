@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Appointments</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📋 All Appointments</h1>
+            <p>View all booked appointments</p>
+        </header>
+
+        <main>
+            <div class="actions">
+                <a href="/" class="btn-secondary">← Back to Booking</a>
+            </div>
+
+            <div class="appointments-list">
+                {% if appointments %}
+                    {% for appointment in appointments %}
+                    <div class="appointment-card">
+                        <h3>{{ appointment.name }}</h3>
+                        <p><strong>Email:</strong> {{ appointment.email }}</p>
+                        <p><strong>Date:</strong> {{ appointment.date }}</p>
+                        <p><strong>Time:</strong> {{ appointment.time }}</p>
+                        {% if appointment.note %}
+                        <div class="note">
+                            <strong>Note:</strong> {{ appointment.note }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <p>No appointments found</p>
+                        <p>Be the first to book an appointment!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </main>
+    </div>
+</body>
+</html>
+

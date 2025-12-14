@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Doctor Appointment</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">🩺 Doctor Appointments</div>
+            <ul class="nav-menu">
+                <li><a href="/" class="nav-link active">Home</a></li>
+                <li><a href="/" class="nav-link">Book Appointment</a></li>
+                <li><a href="/appointments.html" class="nav-link">All Appointments</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <header>
+            <h1>🩺 Doctor Appointment Booking</h1>
+            <p>Book your appointment with ease</p>
+        </header>
+
+        <main>
+            <div id="status" class="status-message"></div>
+            
+            <form id="booking-form" class="booking-form">
+                <div class="form-group">
+                    <label for="name">Name *</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email *</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="date">Date *</label>
+                    <input type="date" id="date" name="date" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="time">Time *</label>
+                    <input type="time" id="time" name="time" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="note">Note (Optional)</label>
+                    <textarea id="note" name="note" rows="4" placeholder="Any additional information..."></textarea>
+                </div>
+
+                <button type="submit" class="btn-primary">Book Appointment</button>
+            </form>
+
+            <div class="actions">
+                <a href="/appointments.html" class="btn-secondary">View All Appointments</a>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2024 Doctor Appointment System. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script>
+        // Use relative API path - Nginx will proxy to backend
+        const API_BASE = '/api';
+        
+        // Check backend health on load
+        fetch(`${API_BASE}/health`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('status').textContent = 'Backend: ' + data.status;
+                document.getElementById('status').className = 'status-message success';
+            })
+            .catch(error => {
+                document.getElementById('status').textContent = 'Backend: Unable to connect';
+                document.getElementById('status').className = 'status-message error';
+            });
+
+        // Handle form submission
+        document.getElementById('booking-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                date: document.getElementById('date').value,
+                time: document.getElementById('time').value,
+                note: document.getElementById('note').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/book`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    window.location.href = '/appointments.html';
+                } else {
+                    alert('Failed to book appointment. Please try again.');
+                }
+            } catch (error) {
+                alert('Error connecting to backend. Please try again.');
+            }
+        });
+    </script>
+</body>
+</html>

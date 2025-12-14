@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Appointments</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">🩺 Doctor Appointments</div>
+            <ul class="nav-menu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="/" class="nav-link">Book Appointment</a></li>
+                <li><a href="/appointments.html" class="nav-link active">All Appointments</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <header>
+            <h1>📋 All Appointments</h1>
+            <p>View all booked appointments</p>
+        </header>
+
+        <main>
+            <div class="appointments-list" id="appointments-list">
+                <div class="empty-state">
+                    <p>Loading appointments...</p>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2024 Doctor Appointment System. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script>
+        // Use relative API path - Nginx will proxy to backend
+        const API_BASE = '/api';
+        
+        // Fetch appointments from backend
+        fetch(`${API_BASE}/appointments?format=json`, {
+            headers: {
+                'Accept': 'application/json'
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                const listDiv = document.getElementById('appointments-list');
+                
+                if (data && data.length > 0) {
+                    // Sort appointments by date and time
+                    const sortedData = data.sort((a, b) => {
+                        const dateA = new Date(a.date + ' ' + a.time);
+                        const dateB = new Date(b.date + ' ' + b.time);
+                        return dateA - dateB;
+                    });
+
+                    // Check which appointments are upcoming
+                    const now = new Date();
+                    
+                    let tableHTML = `
+                        <div class="table-wrapper">
+                            <table class="appointments-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Date</th>
+                                        <th>Time</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+                    
+                    sortedData.forEach(appointment => {
+                        const appointmentDate = new Date(appointment.date + ' ' + appointment.time);
+                        const isUpcoming = appointmentDate > now;
+                        const rowClass = isUpcoming ? 'upcoming' : '';
+                        
+                        tableHTML += `
+                            <tr class="${rowClass}">
+                                <td>${appointment.name}</td>
+                                <td>${appointment.email}</td>
+                                <td>${formatDate(appointment.date)}</td>
+                                <td>${formatTime(appointment.time)}</td>
+                                <td>${appointment.note || '-'}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    tableHTML += `
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    
+                    listDiv.innerHTML = tableHTML;
+                } else {
+                    listDiv.innerHTML = '<div class="empty-state"><p>No appointments found</p><p>Be the first to book an appointment!</p></div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('appointments-list').innerHTML = 
+                    '<div class="empty-state"><p>Error loading appointments</p></div>';
+            });
+
+        // Helper functions for formatting
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+        }
+
+        function formatTime(timeString) {
+            const [hours, minutes] = timeString.split(':');
+            const hour = parseInt(hours);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const displayHour = hour % 12 || 12;
+            return `${displayHour}:${minutes} ${ampm}`;
+        }
+    </script>
+</body>
+</html>
