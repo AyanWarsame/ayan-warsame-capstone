@@ -103,12 +103,12 @@ docker-compose up --build
 
 ### Environment Variables
 
-#### Backend (PostgreSQL)
+#### Backend (MariaDB)
 
 | Variable | Description | Source |
 |----------|-------------|--------|
-| `DB_HOST` | PostgreSQL host | Kubernetes Secret |
-| `DB_PORT` | PostgreSQL port (default: 5432) | Kubernetes Secret |
+| `DB_HOST` | MariaDB host | Kubernetes Secret |
+| `DB_PORT` | MariaDB port (default: 3306) | Kubernetes Secret |
 | `DB_NAME` | Database name | Kubernetes Secret |
 | `DB_USER` | Database username | Kubernetes Secret |
 | `DB_PASSWORD` | Database password | Kubernetes Secret |
@@ -120,10 +120,10 @@ Database credentials are provided via Kubernetes Secret `database-credentials`:
 ```bash
 kubectl create secret generic database-credentials \
   --from-literal=host=<DB_HOST> \
-  --from-literal=port=5432 \
-  --from-literal=database=<DB_NAME> \
-  --from-literal=username=<DB_USER> \
-  --from-literal=password=<DB_PASSWORD> \
+  --from-literal=port=3306 \
+  --from-literal=database=appointments \
+  --from-literal=username=admin \
+  --from-literal=password=admin2266# \
   -n ayan-warsame
 ```
 

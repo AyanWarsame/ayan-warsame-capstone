@@ -1,18 +1,42 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 import os
-import sqlite3
+import pymysql
+import socket
 from datetime import datetime
+
+# Load environment variables from .env file (if available)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # dotenv not available, will use environment variables directly
+    pass
 
 app = Flask(__name__)
 
-# Database configuration from environment variables (SQLite)
-DB_NAME = os.getenv('DB_NAME', 'appointments.db')
+# Database configuration from environment variables (MariaDB)
+# All values must be set in environment variables or .env file
+DB_HOST = os.getenv('DB_HOST')
+DB_PORT = int(os.getenv('DB_PORT', 3306))
+DB_NAME = os.getenv('DB_NAME')
+DB_USER = os.getenv('DB_USER')
+DB_PASSWORD = os.getenv('DB_PASSWORD')
+
+# Validate required environment variables
+if not all([DB_HOST, DB_NAME, DB_USER, DB_PASSWORD]):
+    raise ValueError("Missing required database environment variables: DB_HOST, DB_NAME, DB_USER, DB_PASSWORD")
 
 def get_db_connection():
-    """Get SQLite database connection"""
+    """Get MariaDB database connection"""
     try:
-        conn = sqlite3.connect(DB_NAME)
-        conn.row_factory = sqlite3.Row
+        conn = pymysql.connect(
+            host=DB_HOST,
+            port=DB_PORT,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_NAME,
+            cursorclass=pymysql.cursors.DictCursor
+        )
         return conn
     except Exception as e:
         raise Exception(f"Database connection failed: {str(e)}")
@@ -25,11 +49,11 @@ def init_db():
         
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS appointments (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                email TEXT NOT NULL,
-                date TEXT NOT NULL,
-                time TEXT NOT NULL,
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                email VARCHAR(255) NOT NULL,
+                date VARCHAR(50) NOT NULL,
+                time VARCHAR(50) NOT NULL,
                 note TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -97,7 +121,7 @@ def book_appointment():
         
         cursor.execute('''
             INSERT INTO appointments (name, email, date, time, note)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
         ''', (name, email, date, time, note))
         
         conn.commit()
@@ -119,10 +143,7 @@ def appointments():
         cursor = conn.cursor()
         
         cursor.execute('SELECT * FROM appointments ORDER BY date DESC, time DESC')
-        rows = cursor.fetchall()
-        # Convert Row objects to dictionaries
-        columns = [description[0] for description in cursor.description]
-        appointments_list = [dict(zip(columns, row)) for row in rows]
+        appointments_list = cursor.fetchall()
         
         cursor.close()
         conn.close()
@@ -135,7 +156,24 @@ def appointments():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+def get_free_port():
+    """Get a free port from the OS"""
+    sock = socket.socket()
+    sock.bind(('', 0))  # bind to any free port
+    port = sock.getsockname()[1]
+    sock.close()
+    return port
+
 if __name__ == '__main__':
     init_db()
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    
+    # Use PORT environment variable if set, otherwise get a free port dynamically
+    port = os.getenv('PORT')
+    if port:
+        port = int(port)
+    else:
+        port = get_free_port()
+    
+    print(f"Starting server on port {port}")
+    app.run(host='0.0.0.0', port=port, debug=True)
 

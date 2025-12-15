@@ -16,6 +16,8 @@ spec:
       labels:
         app: backend
     spec:
+      imagePullSecrets:
+      - name: ecr-registry-secret
       containers:
       - name: backend
         image: 032068930750.dkr.ecr.eu-west-1.amazonaws.com/ayan-warsame/backend:1.0.0
@@ -24,6 +26,8 @@ spec:
         - containerPort: 5000
           name: http
         env:
+        - name: PORT
+          value: "5000"
         - name: DB_HOST
           valueFrom:
             secretKeyRef:
@@ -72,6 +76,4 @@ spec:
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 3
-      imagePullSecrets:
-      - name: ecr-registry-secret
 
