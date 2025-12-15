@@ -132,9 +132,9 @@ kubectl create secret generic database-credentials \
 ECR registry secret must be created:
 
 ```bash
-aws ecr get-login-password --region <AWS_REGION> | \
+aws ecr get-login-password --region eu-west-1 | \
   kubectl create secret docker-registry ecr-registry-secret \
-    --docker-server=<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com \
+    --docker-server=024848484634.dkr.ecr.eu-west-1.amazonaws.com \
     --docker-username=AWS \
     --docker-password-stdin \
     -n ayan-warsame
