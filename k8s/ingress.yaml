@@ -6,9 +6,12 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/priority: "100"
+    nginx.ingress.kubernetes.io/server-alias: "ayan-warsame.capstone.company.com"
 spec:
   ingressClassName: nginx
   rules:
+  # Only accept requests with the specific hostname
   - host: ayan-warsame.capstone.company.com
     http:
       paths:
@@ -18,5 +21,5 @@ spec:
           service:
             name: frontend-service
             port:
-              number: 80
+              number: 8080
 
