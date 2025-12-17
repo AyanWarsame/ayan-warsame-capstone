@@ -1,0 +1,15 @@
+apiVersion: v2
+name: ayan-warsame-app
+description: A Helm chart for Doctor Appointment Booking System
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - appointment
+  - booking
+  - doctor
+  - flask
+  - nginx
+maintainers:
+  - name: Ayan Warsame
+

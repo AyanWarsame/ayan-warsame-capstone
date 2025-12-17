@@ -1,0 +1,86 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ayan-warsame-app-alerts
+  namespace: ayan-warsame
+  labels:
+    app: ayan-warsame-app
+    release: prometheus
+spec:
+  groups:
+  - name: ayan-warsame-app
+    interval: 30s
+    rules:
+    # Backend pod down alert
+    - alert: BackendPodDown
+      expr: up{job="backend-service", namespace="ayan-warsame"} == 0
+      for: 5m
+      labels:
+        severity: critical
+        component: backend
+      annotations:
+        summary: "Backend pod is down"
+        description: "Backend pod {{ $labels.pod }} has been down for more than 5 minutes."
+
+    # Frontend pod down alert
+    - alert: FrontendPodDown
+      expr: up{job="frontend-service", namespace="ayan-warsame"} == 0
+      for: 5m
+      labels:
+        severity: critical
+        component: frontend
+      annotations:
+        summary: "Frontend pod is down"
+        description: "Frontend pod {{ $labels.pod }} has been down for more than 5 minutes."
+
+    # High CPU usage alert
+    - alert: HighCPUUsage
+      expr: rate(container_cpu_usage_seconds_total{namespace="ayan-warsame"}[5m]) > 0.8
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High CPU usage detected"
+        description: "Pod {{ $labels.pod }} has CPU usage above 80% for more than 10 minutes."
+
+    # High memory usage alert
+    - alert: HighMemoryUsage
+      expr: (container_memory_working_set_bytes{namespace="ayan-warsame"} / container_spec_memory_limit_bytes) > 0.9
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High memory usage detected"
+        description: "Pod {{ $labels.pod }} has memory usage above 90% for more than 10 minutes."
+
+    # Database connection failure
+    - alert: DatabaseConnectionFailure
+      expr: up{job="backend-service", namespace="ayan-warsame"} == 1 and rate(http_requests_total{code=~"5..", namespace="ayan-warsame"}[5m]) > 0.1
+      for: 5m
+      labels:
+        severity: critical
+        component: backend
+      annotations:
+        summary: "Database connection issues"
+        description: "Backend is experiencing database connection failures (5xx errors)."
+
+    # High request latency
+    - alert: HighRequestLatency
+      expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{namespace="ayan-warsame"}[5m])) > 1
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High request latency"
+        description: "95th percentile request latency is above 1 second for more than 10 minutes."
+
+    # Pod restart alert
+    - alert: PodRestarting
+      expr: rate(kube_pod_container_status_restarts_total{namespace="ayan-warsame"}[15m]) > 0
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Pod is restarting frequently"
+        description: "Pod {{ $labels.pod }} has restarted {{ $value }} times in the last 15 minutes."
+

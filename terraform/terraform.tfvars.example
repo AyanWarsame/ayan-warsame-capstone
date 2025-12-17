@@ -1,0 +1,17 @@
+# Copy this file to terraform.tfvars and update with your values
+# cp terraform.tfvars.example terraform.tfvars
+
+aws_region = "eu-west-1"
+project_name = "ayan-warsame"
+environment = "prod"
+
+# ECR Configuration
+enable_image_scanning = true
+image_retention_count = 10
+
+# Cross-account access (optional)
+enable_cross_account_access = false
+# cross_account_arns = [
+#   "arn:aws:iam::024848484634:root"  # DevOps account
+# ]
+

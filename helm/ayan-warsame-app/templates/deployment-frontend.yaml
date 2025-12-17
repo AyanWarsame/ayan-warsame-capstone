@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+  namespace: {{ .Values.nameOverride | default .Chart.Name }}
+  labels:
+    {{- include "ayan-warsame-app.frontend.selectorLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount.frontend }}
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      {{- if .Values.serviceAccount.frontend.create }}
+      serviceAccountName: {{ .Values.serviceAccount.frontend.name }}
+      {{- end }}
+      {{- with .Values.podSecurityContext.frontend }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: frontend
+        image: "{{ .Values.image.frontend.repository }}:{{ .Values.image.frontend.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.frontend.pullPolicy }}
+        ports:
+        - containerPort: 80
+          name: http
+        {{- with .Values.resources.frontend }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.livenessProbe.frontend }}
+        livenessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.readinessProbe.frontend }}
+        readinessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+

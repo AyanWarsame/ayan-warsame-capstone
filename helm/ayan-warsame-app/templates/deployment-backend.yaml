@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  namespace: {{ .Values.nameOverride | default .Chart.Name }}
+  labels:
+    {{- include "ayan-warsame-app.backend.selectorLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount.backend }}
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      {{- if .Values.serviceAccount.backend.create }}
+      serviceAccountName: {{ .Values.serviceAccount.backend.name }}
+      {{- end }}
+      {{- with .Values.podSecurityContext.backend }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: backend
+        image: "{{ .Values.image.backend.repository }}:{{ .Values.image.backend.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.backend.pullPolicy }}
+        ports:
+        - containerPort: 5000
+          name: http
+        env:
+        - name: PORT
+          value: "5000"
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.credentials.secretName }}
+              key: host
+        - name: DB_PORT
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.credentials.secretName }}
+              key: port
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.credentials.secretName }}
+              key: database
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.credentials.secretName }}
+              key: username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.credentials.secretName }}
+              key: password
+        {{- with .Values.resources.backend }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.livenessProbe.backend }}
+        livenessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.readinessProbe.backend }}
+        readinessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+

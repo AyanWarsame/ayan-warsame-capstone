@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: {{ .Values.nameOverride | default .Chart.Name }}
+  labels:
+    app: backend
+    {{- include "ayan-warsame-app.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.backend.type }}
+  ports:
+    - port: {{ .Values.service.backend.port }}
+      targetPort: 5000
+      protocol: TCP
+      name: http
+  selector:
+    app: backend
+

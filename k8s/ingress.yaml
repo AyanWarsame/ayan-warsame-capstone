@@ -6,7 +6,7 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/priority: "100"
+    nginx.ingress.kubernetes.io/priority: "1000"
     nginx.ingress.kubernetes.io/server-alias: "ayan-warsame.capstone.company.com"
 spec:
   ingressClassName: nginx
@@ -22,4 +22,3 @@ spec:
             name: frontend-service
             port:
               number: 8080
-

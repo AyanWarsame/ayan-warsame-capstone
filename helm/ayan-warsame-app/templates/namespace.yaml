@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.nameOverride | default .Chart.Name }}
+  labels:
+    name: {{ .Values.nameOverride | default .Chart.Name }}
+    project: capstone
+    {{- include "ayan-warsame-app.labels" . | nindent 4 }}
+
