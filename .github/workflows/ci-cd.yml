@@ -133,6 +133,16 @@ jobs:
         kubectl apply -f k8s/service-backend.yaml
         kubectl apply -f k8s/ingress.yaml
 
+    - name: Restart frontend deployment
+      run: |
+        kubectl rollout restart deployment/frontend-deployment -n ${{ env.KUBERNETES_NAMESPACE }}
+        kubectl rollout status deployment/frontend-deployment -n ${{ env.KUBERNETES_NAMESPACE }}
+
+    - name: Restart backend deployment
+      run: |
+        kubectl rollout restart deployment/backend-deployment -n ${{ env.KUBERNETES_NAMESPACE }}
+        kubectl rollout status deployment/backend-deployment -n ${{ env.KUBERNETES_NAMESPACE }}
+
     - name: Verify deployment
       run: |
         kubectl get pods -n ${{ env.KUBERNETES_NAMESPACE }}
