@@ -5,6 +5,7 @@ metadata:
   namespace: ayan-warsame
   labels:
     app: backend
+    monitoring: enabled
 spec:
   type: ClusterIP
   ports:
