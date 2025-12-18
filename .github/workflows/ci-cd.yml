@@ -111,18 +111,39 @@ jobs:
           VERSION=${{ env.APP_VERSION }}
         fi
         echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Using version: $VERSION"
+
+    - name: Get short SHA
+      id: sha
+      run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
     - name: Update Kubernetes manifests with image tags
       env:
         IMAGE_VERSION: ${{ steps.version.outputs.version }}
+        IMAGE_SHA: ${{ steps.sha.outputs.sha }}
       run: |
         ECR_REGISTRY=$(aws sts get-caller-identity --query Account --output text).dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+        echo "ECR Registry: $ECR_REGISTRY"
+        echo "Image Version: $IMAGE_VERSION"
+        echo "Image SHA: $IMAGE_SHA"
+        
+        # Replace placeholders with actual values
         sed -i "s|<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com|$ECR_REGISTRY|g" k8s/deployment-frontend.yaml
         sed -i "s|<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com|$ECR_REGISTRY|g" k8s/deployment-backend.yaml
         sed -i "s|<AWS_REGION>|${{ env.AWS_REGION }}|g" k8s/deployment-frontend.yaml
         sed -i "s|<AWS_REGION>|${{ env.AWS_REGION }}|g" k8s/deployment-backend.yaml
+        
+        # Replace any existing tag (latest or version) with the new version tag
         sed -i "s|:latest|:$IMAGE_VERSION|g" k8s/deployment-frontend.yaml
         sed -i "s|:latest|:$IMAGE_VERSION|g" k8s/deployment-backend.yaml
+        sed -i "s|:[0-9]\+\.[0-9]\+\.[0-9]\+|:$IMAGE_VERSION|g" k8s/deployment-frontend.yaml
+        sed -i "s|:[0-9]\+\.[0-9]\+\.[0-9]\+|:$IMAGE_VERSION|g" k8s/deployment-backend.yaml
+        
+        # Show what we're deploying
+        echo "Frontend image:"
+        grep "image:" k8s/deployment-frontend.yaml
+        echo "Backend image:"
+        grep "image:" k8s/deployment-backend.yaml
 
     - name: Deploy to Kubernetes
       run: |
@@ -133,19 +154,76 @@ jobs:
         kubectl apply -f k8s/service-backend.yaml
         kubectl apply -f k8s/ingress.yaml
 
+    - name: Deploy Monitoring Stack
+      run: |
+        echo "Deploying monitoring components..."
+        # Deploy Prometheus RBAC first
+        kubectl apply -f monitoring/prometheus-rbac.yaml || echo "Prometheus RBAC may already exist"
+        
+        # Deploy Prometheus
+        kubectl apply -f monitoring/prometheus-file.yaml
+        kubectl apply -f monitoring/prometheus-service.yaml
+        
+        # Deploy Alertmanager
+        kubectl apply -f monitoring/alert-manager.yaml
+        kubectl apply -f monitoring/alertmanager-service.yaml
+        
+        # Deploy Alert Rules
+        kubectl apply -f monitoring/alert-rule-file.yaml
+        
+        # Deploy ServiceMonitor
+        kubectl apply -f monitoring/servicemonitor.yaml
+        
+        # Deploy Grafana
+        kubectl apply -f monitoring/grafana-datasources.yaml
+        kubectl apply -f monitoring/grafana-dashboards.yaml
+        kubectl apply -f monitoring/grafana-deployment.yaml
+        kubectl apply -f monitoring/grafana-service.yaml
+        kubectl apply -f monitoring/grafana-ingress.yaml || echo "Grafana ingress may fail if ingress controller not configured"
+        
+        echo "Monitoring stack deployed successfully!"
+
+    - name: Wait for Grafana to be ready
+      run: |
+        echo "Waiting for Grafana deployment to be ready..."
+        kubectl wait --for=condition=available --timeout=3m deployment/grafana -n ${{ env.KUBERNETES_NAMESPACE }} || echo "Grafana deployment not ready yet (may need Prometheus Operator)"
+        echo "Grafana status:"
+        kubectl get deployment/grafana -n ${{ env.KUBERNETES_NAMESPACE }} || echo "Grafana deployment not found"
+
     - name: Restart frontend deployment
       run: |
+        echo "Restarting frontend deployment..."
         kubectl rollout restart deployment/frontend-deployment -n ${{ env.KUBERNETES_NAMESPACE }}
-        kubectl rollout status deployment/frontend-deployment -n ${{ env.KUBERNETES_NAMESPACE }}
+        echo "Waiting for rollout to complete..."
+        kubectl rollout status deployment/frontend-deployment -n ${{ env.KUBERNETES_NAMESPACE }} --timeout=5m
+        echo "Frontend rollout complete!"
 
     - name: Restart backend deployment
       run: |
+        echo "Restarting backend deployment..."
         kubectl rollout restart deployment/backend-deployment -n ${{ env.KUBERNETES_NAMESPACE }}
-        kubectl rollout status deployment/backend-deployment -n ${{ env.KUBERNETES_NAMESPACE }}
+        echo "Waiting for rollout to complete..."
+        kubectl rollout status deployment/backend-deployment -n ${{ env.KUBERNETES_NAMESPACE }} --timeout=5m
+        echo "Backend rollout complete!"
 
     - name: Verify deployment
       run: |
-        kubectl get pods -n ${{ env.KUBERNETES_NAMESPACE }}
+        echo "=== Pod Status ==="
+        kubectl get pods -n ${{ env.KUBERNETES_NAMESPACE }} -l app=frontend
+        kubectl get pods -n ${{ env.KUBERNETES_NAMESPACE }} -l app=backend
+        echo ""
+        echo "=== Services ==="
         kubectl get services -n ${{ env.KUBERNETES_NAMESPACE }}
+        echo ""
+        echo "=== Ingress ==="
         kubectl get ingress -n ${{ env.KUBERNETES_NAMESPACE }}
+        echo ""
+        echo "=== Frontend Pod Images ==="
+        kubectl get pods -n ${{ env.KUBERNETES_NAMESPACE }} -l app=frontend -o jsonpath='{range .items[*]}{.metadata.name}{": "}{.spec.containers[0].image}{"\n"}{end}'
+        echo ""
+        echo "=== Monitoring Components ==="
+        kubectl get pods -n ${{ env.KUBERNETES_NAMESPACE }} -l app=grafana || echo "Grafana pod not ready yet"
+        kubectl get pods -n ${{ env.KUBERNETES_NAMESPACE }} -l app=prometheus || echo "Prometheus pod not ready yet"
+        kubectl get servicemonitor -n ${{ env.KUBERNETES_NAMESPACE }} || echo "ServiceMonitor not found"
+        kubectl get prometheusrule -n ${{ env.KUBERNETES_NAMESPACE }} || echo "PrometheusRule not found"
 

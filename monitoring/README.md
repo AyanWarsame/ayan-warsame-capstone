@@ -1,154 +1,106 @@
-# Monitoring Configuration
+# Monitoring Setup Guide
 
-This directory contains Prometheus monitoring configurations for the Ayan Warsame capstone application.
+This directory contains all the monitoring components for the Ayan Warsame Capstone application, including Prometheus, Grafana, and Alertmanager.
 
-## Contents
+## Components
 
-- `servicemonitor.yaml` - ServiceMonitor resources for Prometheus Operator to scrape metrics
-- `prometheus-rules.yaml` - PrometheusRule for alerting rules
-- `grafana-dashboard.json` - Grafana dashboard configuration
+### 1. Prometheus
+- **File**: `prometheus-file.yaml`
+- **Service**: `prometheus-service.yaml`
+- **RBAC**: `prometheus-rbac.yaml`
+- **Purpose**: Collects and stores metrics from your applications
 
-## Prerequisites
+### 2. Grafana
+- **Deployment**: `grafana-deployment.yaml`
+- **Service**: `grafana-service.yaml`
+- **Ingress**: `grafana-ingress.yaml`
+- **Datasources**: `grafana-datasources.yaml`
+- **Dashboards**: `grafana-dashboards.yaml`
+- **Purpose**: Visualizes metrics and provides dashboards
+- **Default Credentials**:
+  - Username: `admin`
+  - Password: `admin`
 
-- Prometheus Operator installed in the cluster
-- Prometheus and Grafana deployed (via Prometheus Operator or standalone)
+### 3. Alertmanager
+- **File**: `alert-manager.yaml`
+- **Service**: `alertmanager-service.yaml`
+- **Purpose**: Handles alerts from Prometheus and sends notifications
 
-## Installation
+### 4. ServiceMonitor
+- **File**: `servicemonitor.yaml`
+- **Purpose**: Tells Prometheus which services to scrape for metrics
 
-### ServiceMonitor
+### 5. Alert Rules
+- **File**: `alert-rule-file.yaml`
+- **Purpose**: Defines alert conditions and thresholds
 
-ServiceMonitor tells Prometheus which services to scrape:
+## Deployment
 
-```bash
-kubectl apply -f monitoring/servicemonitor.yaml
-```
+### Prerequisites
 
-This will configure Prometheus to scrape:
-- Backend service metrics endpoint (`/metrics`)
-- Backend health endpoint (`/health`)
-- Frontend health endpoint (`/health`)
+1. **Prometheus Operator**: Ensure the Prometheus Operator is installed in your cluster
+2. **Namespace**: Ensure the `ayan-warsame` namespace exists
 
-### Prometheus Rules (Alerts)
+### Deploy Monitoring Stack
 
-PrometheusRule defines alerting rules:
-
-```bash
-kubectl apply -f monitoring/prometheus-rules.yaml
-```
-
-Alerts configured:
-- **BackendPodDown**: Critical alert when backend pod is down
-- **FrontendPodDown**: Critical alert when frontend pod is down
-- **HighCPUUsage**: Warning when CPU usage exceeds 80%
-- **HighMemoryUsage**: Warning when memory usage exceeds 90%
-- **DatabaseConnectionFailure**: Critical alert for database connection issues
-- **HighRequestLatency**: Warning for high request latency (>1s p95)
-- **PodRestarting**: Warning for pods restarting frequently
-
-### Grafana Dashboard
-
-Import the dashboard into Grafana:
+Deploy all monitoring components:
 
 ```bash
-kubectl apply -f monitoring/grafana-dashboard.yaml
+kubectl apply -f monitoring/
 ```
 
-Or manually import the JSON from the ConfigMap.
+## Accessing Grafana
 
-## Metrics Endpoints
-
-### Backend Metrics
-
-The backend should expose metrics at `/metrics` endpoint. If using Flask, you can use `prometheus-flask-exporter`:
-
-```python
-from prometheus_flask_exporter import PrometheusMetrics
-
-metrics = PrometheusMetrics(app)
-```
-
-### Frontend Metrics
-
-Frontend exposes health metrics at `/health` endpoint, which can be scraped for availability monitoring.
-
-## Verification
-
-### Check ServiceMonitor
+### Port Forward (Quick Access)
 
 ```bash
-kubectl get servicemonitor -n ayan-warsame
-kubectl describe servicemonitor ayan-warsame-app -n ayan-warsame
+kubectl port-forward -n ayan-warsame svc/grafana-service 3000:3000
 ```
 
-### Check Prometheus Targets
+Then open: http://localhost:3000
 
-1. Access Prometheus UI
-2. Navigate to Status > Targets
-3. Verify `ayan-warsame-app` and `ayan-warsame-frontend` targets are UP
+### Ingress (Production)
 
-### Check Alerts
+If you've deployed the Grafana ingress, access via:
+- URL: `http://grafana.ayan-warsame.capstone.company.com`
+
+## Using Grafana
+
+### First Login
+
+1. Open Grafana in your browser
+2. Login with:
+   - Username: `admin`
+   - Password: `admin`
+3. **Change the password** when prompted
+
+### Creating Dashboards
+
+1. Click the **"+"** icon in the left sidebar
+2. Select **"Create Dashboard"**
+3. Click **"Add visualization"**
+4. Select **"Prometheus"** as the data source
+5. Write PromQL queries to visualize metrics
+
+### Example Queries
+
+- **CPU Usage**: `rate(container_cpu_usage_seconds_total{namespace="ayan-warsame"}[5m])`
+- **Memory Usage**: `container_memory_working_set_bytes{namespace="ayan-warsame"}`
+- **Pod Status**: `up{namespace="ayan-warsame"}`
+
+## Verifying Setup
+
+### Check Prometheus
 
 ```bash
-kubectl get prometheusrule -n ayan-warsame
+kubectl port-forward -n ayan-warsame svc/prometheus-service 9090:9090
 ```
 
-Access Prometheus UI and navigate to Alerts to see configured alerts.
+Access Prometheus at: http://localhost:9090
 
-## Custom Metrics
+### Check Grafana
 
-To add custom application metrics:
-
-1. Instrument your application with Prometheus client libraries
-2. Expose metrics at `/metrics` endpoint
-3. ServiceMonitor will automatically scrape them
-
-### Example: Flask Application
-
-```python
-from prometheus_client import Counter, Histogram, generate_latest
-
-# Define metrics
-http_requests_total = Counter('http_requests_total', 'Total HTTP requests', ['method', 'status'])
-http_request_duration = Histogram('http_request_duration_seconds', 'HTTP request duration')
-
-# Expose metrics endpoint
-@app.route('/metrics')
-def metrics():
-    return generate_latest()
+```bash
+kubectl get pods -n ayan-warsame | grep grafana
+kubectl logs -n ayan-warsame deployment/grafana
 ```
-
-## Troubleshooting
-
-### ServiceMonitor not working
-
-1. Check Prometheus Operator is installed:
-   ```bash
-   kubectl get crd | grep servicemonitor
-   ```
-
-2. Check ServiceMonitor labels match Prometheus selector:
-   ```bash
-   kubectl get prometheus -n <prometheus-namespace> -o yaml
-   ```
-
-3. Verify service has correct labels:
-   ```bash
-   kubectl get svc backend-service -n ayan-warsame --show-labels
-   ```
-
-### Metrics not appearing
-
-1. Check if metrics endpoint is accessible:
-   ```bash
-   kubectl port-forward svc/backend-service 5000:5000 -n ayan-warsame
-   curl http://localhost:5000/metrics
-   ```
-
-2. Check Prometheus targets status in Prometheus UI
-
-## References
-
-- [Prometheus Operator](https://github.com/prometheus-operator/prometheus-operator)
-- [Prometheus Documentation](https://prometheus.io/docs/)
-- [Grafana Dashboards](https://grafana.com/docs/grafana/latest/dashboards/)
-

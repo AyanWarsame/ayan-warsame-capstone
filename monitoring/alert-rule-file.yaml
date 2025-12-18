@@ -83,4 +83,3 @@ spec:
       annotations:
         summary: "Pod is restarting frequently"
         description: "Pod {{ $labels.pod }} has restarted {{ $value }} times in the last 15 minutes."
-
