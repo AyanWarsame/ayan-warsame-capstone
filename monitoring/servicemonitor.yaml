@@ -5,14 +5,10 @@ metadata:
   namespace: ayan-warsame
   labels:
     release: prometheus
-    app: ayan-warsame-app
 spec:
   selector:
     matchLabels:
       monitoring: enabled
   endpoints:
   - port: http
-    interval: 30s
     path: /metrics
-    scheme: http
-    scrapeTimeout: 10s

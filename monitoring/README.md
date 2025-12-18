@@ -1,106 +1,36 @@
-# Monitoring Setup Guide
+# Monitoring Setup
 
-This directory contains all the monitoring components for the Ayan Warsame Capstone application, including Prometheus, Grafana, and Alertmanager.
+Simple monitoring setup with Prometheus and Grafana.
 
-## Components
+## Files
 
-### 1. Prometheus
-- **File**: `prometheus-file.yaml`
-- **Service**: `prometheus-service.yaml`
-- **RBAC**: `prometheus-rbac.yaml`
-- **Purpose**: Collects and stores metrics from your applications
+- `prometheus.yaml` - Prometheus (RBAC, deployment, service)
+- `grafana.yaml` - Grafana (deployment, service, datasources, ingress)
+- `alertmanager.yaml` - Alertmanager (deployment, service, config)
+- `servicemonitor.yaml` - Tell Prometheus what to monitor
+- `alert-rules.yaml` - Alert rules
 
-### 2. Grafana
-- **Deployment**: `grafana-deployment.yaml`
-- **Service**: `grafana-service.yaml`
-- **Ingress**: `grafana-ingress.yaml`
-- **Datasources**: `grafana-datasources.yaml`
-- **Dashboards**: `grafana-dashboards.yaml`
-- **Purpose**: Visualizes metrics and provides dashboards
-- **Default Credentials**:
-  - Username: `admin`
-  - Password: `admin`
-
-### 3. Alertmanager
-- **File**: `alert-manager.yaml`
-- **Service**: `alertmanager-service.yaml`
-- **Purpose**: Handles alerts from Prometheus and sends notifications
-
-### 4. ServiceMonitor
-- **File**: `servicemonitor.yaml`
-- **Purpose**: Tells Prometheus which services to scrape for metrics
-
-### 5. Alert Rules
-- **File**: `alert-rule-file.yaml`
-- **Purpose**: Defines alert conditions and thresholds
-
-## Deployment
-
-### Prerequisites
-
-1. **Prometheus Operator**: Ensure the Prometheus Operator is installed in your cluster
-2. **Namespace**: Ensure the `ayan-warsame` namespace exists
-
-### Deploy Monitoring Stack
-
-Deploy all monitoring components:
+## Deploy
 
 ```bash
 kubectl apply -f monitoring/
 ```
 
-## Accessing Grafana
-
-### Port Forward (Quick Access)
+## Access Grafana
 
 ```bash
 kubectl port-forward -n ayan-warsame svc/grafana-service 3000:3000
 ```
 
-Then open: http://localhost:3000
+Open: http://localhost:3000
 
-### Ingress (Production)
+**Login:**
+- Username: `admin`
+- Password: `admin`
 
-If you've deployed the Grafana ingress, access via:
-- URL: `http://grafana.ayan-warsame.capstone.company.com`
+## Create Dashboards
 
-## Using Grafana
-
-### First Login
-
-1. Open Grafana in your browser
-2. Login with:
-   - Username: `admin`
-   - Password: `admin`
-3. **Change the password** when prompted
-
-### Creating Dashboards
-
-1. Click the **"+"** icon in the left sidebar
-2. Select **"Create Dashboard"**
-3. Click **"Add visualization"**
-4. Select **"Prometheus"** as the data source
-5. Write PromQL queries to visualize metrics
-
-### Example Queries
-
-- **CPU Usage**: `rate(container_cpu_usage_seconds_total{namespace="ayan-warsame"}[5m])`
-- **Memory Usage**: `container_memory_working_set_bytes{namespace="ayan-warsame"}`
-- **Pod Status**: `up{namespace="ayan-warsame"}`
-
-## Verifying Setup
-
-### Check Prometheus
-
-```bash
-kubectl port-forward -n ayan-warsame svc/prometheus-service 9090:9090
-```
-
-Access Prometheus at: http://localhost:9090
-
-### Check Grafana
-
-```bash
-kubectl get pods -n ayan-warsame | grep grafana
-kubectl logs -n ayan-warsame deployment/grafana
-```
+1. Click "+" → "Create Dashboard"
+2. Click "Add visualization"
+3. Select "Prometheus" as data source
+4. Write queries like: `up{namespace="ayan-warsame"}`

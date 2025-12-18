@@ -157,38 +157,62 @@ jobs:
     - name: Deploy Monitoring Stack
       run: |
         echo "Deploying monitoring components..."
-        # Deploy Prometheus RBAC first
-        kubectl apply -f monitoring/prometheus-rbac.yaml || echo "Prometheus RBAC may already exist"
         
-        # Deploy Prometheus
-        kubectl apply -f monitoring/prometheus-file.yaml
-        kubectl apply -f monitoring/prometheus-service.yaml
+        # Ensure namespace exists
+        kubectl get namespace ${{ env.KUBERNETES_NAMESPACE }} || kubectl create namespace ${{ env.KUBERNETES_NAMESPACE }}
         
-        # Deploy Alertmanager
-        kubectl apply -f monitoring/alert-manager.yaml
-        kubectl apply -f monitoring/alertmanager-service.yaml
+        # Check if Prometheus Operator CRDs exist
+        if kubectl get crd prometheuses.monitoring.coreos.com 2>/dev/null; then
+          echo "Prometheus Operator detected, deploying full monitoring stack..."
+          HAS_PROMETHEUS_OPERATOR=true
+        else
+          echo "Prometheus Operator not detected, deploying Grafana only..."
+          HAS_PROMETHEUS_OPERATOR=false
+        fi
         
-        # Deploy Alert Rules
-        kubectl apply -f monitoring/alert-rule-file.yaml
+        # Deploy Grafana (works without Prometheus Operator)
+        echo "Deploying Grafana..."
+        kubectl apply -f monitoring/grafana.yaml
+        if [ $? -eq 0 ]; then
+          echo "✓ Grafana deployed successfully"
+        else
+          echo "✗ Grafana deployment failed"
+          exit 1
+        fi
         
-        # Deploy ServiceMonitor
-        kubectl apply -f monitoring/servicemonitor.yaml
+        # Deploy Prometheus components only if Prometheus Operator exists
+        if [ "$HAS_PROMETHEUS_OPERATOR" = "true" ]; then
+          echo "Deploying Prometheus..."
+          kubectl apply -f monitoring/prometheus.yaml || echo "⚠ Prometheus deployment had issues"
+          
+          echo "Deploying Alertmanager..."
+          kubectl apply -f monitoring/alertmanager.yaml || echo "⚠ Alertmanager deployment had issues"
+          
+          echo "Deploying Alert Rules..."
+          kubectl apply -f monitoring/alert-rules.yaml || echo "⚠ Alert rules deployment had issues"
+          
+          echo "Deploying ServiceMonitor..."
+          kubectl apply -f monitoring/servicemonitor.yaml || echo "⚠ ServiceMonitor deployment had issues"
+        else
+          echo "Skipping Prometheus Operator resources (CRDs not found)"
+        fi
         
-        # Deploy Grafana
-        kubectl apply -f monitoring/grafana-datasources.yaml
-        kubectl apply -f monitoring/grafana-dashboards.yaml
-        kubectl apply -f monitoring/grafana-deployment.yaml
-        kubectl apply -f monitoring/grafana-service.yaml
-        kubectl apply -f monitoring/grafana-ingress.yaml || echo "Grafana ingress may fail if ingress controller not configured"
-        
-        echo "Monitoring stack deployed successfully!"
+        echo "Monitoring stack deployment completed!"
 
     - name: Wait for Grafana to be ready
+      continue-on-error: true
       run: |
         echo "Waiting for Grafana deployment to be ready..."
-        kubectl wait --for=condition=available --timeout=3m deployment/grafana -n ${{ env.KUBERNETES_NAMESPACE }} || echo "Grafana deployment not ready yet (may need Prometheus Operator)"
-        echo "Grafana status:"
-        kubectl get deployment/grafana -n ${{ env.KUBERNETES_NAMESPACE }} || echo "Grafana deployment not found"
+        if kubectl get deployment grafana -n ${{ env.KUBERNETES_NAMESPACE }} 2>/dev/null; then
+          kubectl wait --for=condition=available --timeout=5m deployment/grafana -n ${{ env.KUBERNETES_NAMESPACE }} || echo "Grafana not ready yet (will continue)"
+          echo "Grafana status:"
+          kubectl get deployment/grafana -n ${{ env.KUBERNETES_NAMESPACE }}
+          echo ""
+          echo "To access Grafana, run:"
+          echo "kubectl port-forward -n ${{ env.KUBERNETES_NAMESPACE }} svc/grafana-service 3000:3000"
+        else
+          echo "Grafana deployment not found"
+        fi
 
     - name: Restart frontend deployment
       run: |
@@ -222,8 +246,11 @@ jobs:
         kubectl get pods -n ${{ env.KUBERNETES_NAMESPACE }} -l app=frontend -o jsonpath='{range .items[*]}{.metadata.name}{": "}{.spec.containers[0].image}{"\n"}{end}'
         echo ""
         echo "=== Monitoring Components ==="
-        kubectl get pods -n ${{ env.KUBERNETES_NAMESPACE }} -l app=grafana || echo "Grafana pod not ready yet"
-        kubectl get pods -n ${{ env.KUBERNETES_NAMESPACE }} -l app=prometheus || echo "Prometheus pod not ready yet"
-        kubectl get servicemonitor -n ${{ env.KUBERNETES_NAMESPACE }} || echo "ServiceMonitor not found"
-        kubectl get prometheusrule -n ${{ env.KUBERNETES_NAMESPACE }} || echo "PrometheusRule not found"
+        echo "Grafana:"
+        kubectl get pods,svc -n ${{ env.KUBERNETES_NAMESPACE }} -l app=grafana 2>/dev/null || echo "Grafana not found"
+        echo ""
+        echo "Prometheus (if Prometheus Operator installed):"
+        kubectl get prometheus -n ${{ env.KUBERNETES_NAMESPACE }} 2>/dev/null || echo "Prometheus CRD not available"
+        kubectl get servicemonitor -n ${{ env.KUBERNETES_NAMESPACE }} 2>/dev/null || echo "ServiceMonitor not found"
+        kubectl get prometheusrule -n ${{ env.KUBERNETES_NAMESPACE }} 2>/dev/null || echo "PrometheusRule not found"
 

@@ -1,0 +1,34 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Alertmanager
+metadata:
+  name: alertmanager
+  namespace: ayan-warsame
+spec:
+  replicas: 1
+  configSecret: alertmanager-config
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alertmanager-config
+  namespace: ayan-warsame
+type: Opaque
+stringData:
+  alertmanager.yaml: |
+    route:
+      receiver: 'default'
+    receivers:
+    - name: 'default'
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  namespace: ayan-warsame
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9093
+    targetPort: 9093
+  selector:
+    alertmanager: alertmanager
