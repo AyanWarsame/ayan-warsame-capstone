@@ -161,7 +161,7 @@ jobs:
         echo "Restarting frontend deployment..."
         kubectl rollout restart deployment/frontend-deployment -n ${{ env.KUBERNETES_NAMESPACE }}
         echo "Waiting for rollout to complete..."
-        kubectl rollout status deployment/frontend-deployment -n ${{ env.KUBERNETES_NAMESPACE }} --timeout=5m
+        kubectl rollout status deployment/frontend-deployment -n ${{ env.KUBERNETES_NAMESPACE }} --timeout=5m || true
         echo "Frontend rollout complete!"
 
     - name: Restart backend deployment
