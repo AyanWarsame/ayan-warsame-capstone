@@ -157,6 +157,7 @@ jobs:
         kubectl apply -f k8s/ingress.yaml
 
     - name: Restart frontend deployment
+      continue-on-error: true
       run: |
         echo "Restarting frontend deployment..."
         kubectl rollout restart deployment/frontend-deployment -n ${{ env.KUBERNETES_NAMESPACE }}
