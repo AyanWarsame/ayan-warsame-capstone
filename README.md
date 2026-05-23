@@ -319,21 +319,4 @@ Potential enhancements for extra credit:
 - [Kubernetes Best Practices](https://kubernetes.io/docs/concepts/configuration/overview/)
 - [GitHub Actions AWS ECR Login](https://github.com/aws-actions/amazon-ecr-login)
 
-## 👥 Support
 
-**DevOps Team Contacts**:
-- dan@tiberbu.com
-- njoroge@tiberbu.com
-- elvis@tiberbu.com
-
-**Mentors**: Daniel, James, Elvis
-
-## 📄 License
-
-This project is for educational purposes as part of the capstone project.
-
----
-
-**Author**: Ayan Warsame  
-**Project**: Capstone - Production Deployment on AWS EKS  
-**Duration**: 7 Days (1 Week)
